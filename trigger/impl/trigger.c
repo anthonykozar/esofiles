@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 unsigned char prog[1048576];
@@ -12,33 +13,46 @@ unsigned char trigger[256];
 
 int main(int argc, char **argv)
 {
-    int pc = 0, max, bits=0, input=0;
+    int pc = 0, max, bits=0, input=0, trace=0, argi=0, haveprog=0, haveinfile=0;
     FILE *in;
 
     srand(time(NULL));
 
-    if (argc<2) {
-        fprintf(stderr, "Usage: %s program [inputfile]\n", argv[0]);
+    while (++argi < argc) {
+        if (strcmp(argv[argi], "-t") == 0) {
+            trace = 1;
+        }
+        else if (!haveprog) {
+            in = fopen(argv[argi], "r");
+            if (!in) {
+                fprintf(stderr, "Could not open '%s'.\n", argv[argi]);
+                exit(1);
+            }
+            max = fread(prog, 1, sizeof(prog), in);
+            fclose(in);
+            in = NULL;
+            haveprog = 1;
+        }
+        else if (!haveinfile) {
+            in = fopen(argv[argi], "r");
+            if (!in) {
+                fprintf(stderr, "Could not open '%s'.\n", argv[argi]);
+                exit(1);
+            }
+            haveinfile = 1;
+        }
+    }
+    if (!haveprog) {
+        fprintf(stderr, "Usage: %s [-t] program [inputfile]\n", argv[0]);
         exit(1);
     }
-    in = fopen(argv[1], "r");
-    if (!in) {
-        fprintf(stderr, "Could not open '%s'.", argv[1]);
-        exit(1);
-    }
-    max = fread(prog, 1, sizeof(prog), in);
-    fclose(in);
-    in = NULL;
     input = EOF;
-    if (argc>2) {
-        in = fopen(argv[2], "r");
-    }
-    else {
+    if (!haveinfile) {
         in = stdin;
     }
     if (max == sizeof(prog)) {
         fprintf(stderr, "Warning: only the first %d bytes of the program "
-                "were read.", sizeof(prog));
+                "were read.\n", sizeof(prog));
     }
     while (pc<max) {
         if (pc<max-1 && prog[pc] == prog[pc+1]) {
@@ -53,6 +67,9 @@ int main(int argc, char **argv)
                     if (input != EOF) {
                         bits--;
                         trigger[prog[pc]] = !!(input & (1<<bits));
+                        if (trace) {
+                            fprintf(stderr, "Input:  %c = %d\n", prog[pc], (int) trigger[prog[pc]]);
+                        }
                     }
                     pc += 4;
                 } else {
@@ -91,10 +108,16 @@ int main(int argc, char **argv)
                     /* skip */
                     pc += 3;
                 }
+                if (trace) {
+                    fprintf(stderr, "Jump:   pc = %d\n", pc);
+                }
             }
         } else {
             /* A pattern -> toggle */
             trigger[prog[pc]] ^= 1;
+            if (trace) {
+                fprintf(stderr, "Toggle: %c = %d\n", prog[pc], (int) trigger[prog[pc]]);
+            }
             pc++;
         }
     }
