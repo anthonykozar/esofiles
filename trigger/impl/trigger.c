@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     srand(time(NULL));
 
     if (argc<2) {
-        fprintf(stderr, "Usage: %s program [input]\n", argv[0]);
+        fprintf(stderr, "Usage: %s program [inputfile]\n", argv[0]);
         exit(1);
     }
     in = fopen(argv[1], "r");
@@ -32,6 +32,9 @@ int main(int argc, char **argv)
     input = EOF;
     if (argc>2) {
         in = fopen(argv[2], "r");
+    }
+    else {
+        in = stdin;
     }
     if (max == sizeof(prog)) {
         fprintf(stderr, "Warning: only the first %d bytes of the program "
